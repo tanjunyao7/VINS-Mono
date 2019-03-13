@@ -12,12 +12,20 @@ using namespace std;
 
 class ImageFrame
 {
+    int ID()
+      {
+        static unsigned int ID=0;
+        return ID++;
+      }
     public:
-        ImageFrame(){};
-        ImageFrame(const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>>& _points, double _t):t{_t},is_key_frame{false}
+        ImageFrame():id_(ID()) {}
+        ImageFrame(const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>>& _points, double _t):id_(ID())
         {
+            t=_t;
+            is_key_frame=false;
             points = _points;
-        };
+        }
+        const int id_;
         map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>> > > points;
         double t;
         Matrix3d R;

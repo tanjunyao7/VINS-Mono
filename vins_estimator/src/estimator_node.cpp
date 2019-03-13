@@ -107,7 +107,7 @@ getMeasurements()
 
         if (!(imu_buf.back()->header.stamp.toSec() > feature_buf.front()->header.stamp.toSec() + estimator.td))
         {
-            //ROS_WARN("wait for imu, only should happen at the beginning");
+            ROS_WARN("wait for imu, only should happen at the beginning");
             sum_of_wait++;
             return measurements;
         }
@@ -208,6 +208,7 @@ void relocalization_callback(const sensor_msgs::PointCloudConstPtr &points_msg)
 // thread: visual-inertial odometry
 void process()
 {
+
     while (true)
     {
         std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
@@ -221,11 +222,13 @@ void process()
         for (auto &measurement : measurements)
         {
             auto img_msg = measurement.second;
+            double img_t = img_msg->header.stamp.toSec() + estimator.td;
+
             double dx = 0, dy = 0, dz = 0, rx = 0, ry = 0, rz = 0;
             for (auto &imu_msg : measurement.first)
             {
                 double t = imu_msg->header.stamp.toSec();
-                double img_t = img_msg->header.stamp.toSec() + estimator.td;
+
                 if (t <= img_t)
                 { 
                     if (current_time < 0)
@@ -263,6 +266,7 @@ void process()
                     //printf("dimu: dt:%f a: %f %f %f w: %f %f %f\n",dt_1, dx, dy, dz, rx, ry, rz);
                 }
             }
+
             // set relocalization frame
             sensor_msgs::PointCloudConstPtr relo_msg = NULL;
             while (!relo_buf.empty())

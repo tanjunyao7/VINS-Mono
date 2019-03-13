@@ -134,6 +134,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 
     ImageFrame imageframe(image, header.stamp.toSec());
     imageframe.pre_integration = tmp_pre_integration;
+
     all_image_frame.insert(make_pair(header.stamp.toSec(), imageframe));
     tmp_pre_integration = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
 
@@ -167,6 +168,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             }
             if(result)
             {
+
                 solver_flag = NON_LINEAR;
                 solveOdometry();
                 slideWindow();
@@ -351,6 +353,8 @@ bool Estimator::initialStructure()
         frame_it->second.R = R_pnp * RIC[0].transpose();
         frame_it->second.T = T_pnp;
     }
+
+
     if (visualInitialAlign())
         return true;
     else
@@ -365,11 +369,41 @@ bool Estimator::visualInitialAlign()
 {
     TicToc t_g;
     VectorXd x;
+
+    cout<<"frame times: ";
+    for (int i = 0; i <= frame_count; i++)
+        cout<<Headers[i].stamp<<" ";
+    cout<<endl;
+
+    ofstream myfile;
+    myfile.open ("/home/tan/data1.txt");
+
+    for (int i=0;i<= frame_count;i++)
+    {
+      myfile<<"time: "<<Headers[i].stamp<<endl;
+
+    auto temp=all_image_frame[Headers[i].stamp.toSec()].pre_integration;
+    myfile<<"delta_p: "<<temp->delta_p.transpose()<<endl;
+    myfile<<"delta_q: "<<temp->delta_q.w()<<" "<<temp->delta_q.vec().transpose()<<endl;
+    myfile<<"delta_v: "<<temp->delta_v.transpose()<<endl;
+    myfile<<"linearized_acc: "<<temp->linearized_acc.transpose()<<endl;
+    myfile<<"linearized_gyr: "<<temp->linearized_gyr.transpose()<<endl;
+    myfile<<"linearized_ba: "<<temp->linearized_ba<<endl;
+    myfile<<"linearized_bg: "<<temp->linearized_bg<<endl;
+    myfile<<"a:                                             w:      "<<endl;
+    for(int j=0;j<temp->acc_buf.size();j++)
+    {
+      myfile<<temp->acc_buf[j].transpose()<<"             "<<temp->gyr_buf[j].transpose()<<endl;
+    }
+      myfile<<endl;
+    }
+    myfile.close();
+
     //solve scale
     bool result = VisualIMUAlignment(all_image_frame, Bgs, g, x);
     if(!result)
     {
-        ROS_DEBUG("solve g failed!");
+        ROS_INFO("solve g failed!");
         return false;
     }
 
@@ -459,10 +493,11 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
 
             }
             average_parallax = 1.0 * sum_parallax / int(corres.size());
-            if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
+            const float thres=120;//30
+            if(average_parallax * 460 > thres && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
             {
                 l = i;
-                ROS_DEBUG("average_parallax %f choose l %d and newest frame to triangulate the whole structure", average_parallax * 460, l);
+                ROS_INFO("average_parallax %f choose l %d and newest frame to triangulate the whole structure", average_parallax * 460, l);
                 return true;
             }
         }
